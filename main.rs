@@ -2,8 +2,18 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 
-struct VM {
-  stack: Vec<String>
+struct VM<'a> {
+  stack: Vec<String>,
+  instructions: Vec<&'a str>
+}
+
+impl<'a> VM<'a> {
+  pub fn new(instructions: Vec<&'a str>) -> VM {
+    VM {
+      stack: Vec::new(),
+      instructions: instructions
+    }
+  }
 }
 
 fn main() {
@@ -16,6 +26,8 @@ fn main() {
         let mut content = String::new();
         if let Ok(_) = file.read_to_string(&mut content) {
           println!("The file contains {}", content);
+
+          let vm = VM::new(content.split('\n').collect());
         }
       },
       Err(err) => {
