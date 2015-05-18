@@ -1,3 +1,4 @@
+#![feature(convert)]
 #![feature(slice_patterns)]
 use std::env;
 use std::fs::File;
@@ -23,12 +24,18 @@ impl<'a> VM<'a> {
         ["push", n] => self.stack.push(n.parse::<i64>().unwrap()),
         ["add"] => {
           if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
-            println!("got {}", arg1 + arg2);
+            self.stack.push(arg1 + arg2);
           } else {
             println!("VM error: not enough arguments to `add`");
           }
         },
-        _ => println!("VM error: Unrecognized instruction!") // todo err!
+        ["say"] => if let Some(arg) = self.stack.pop() {
+          println!("hey {}", arg);
+        } else {
+          println!("VM error: not enough arguments to `say`");
+        },
+        [""] => (), // just trap this for now
+        [..] => println!("VM error: Unrecognized instruction!"), // todo err!
       }
     }
   }
