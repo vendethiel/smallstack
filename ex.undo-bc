@@ -6,3 +6,7 @@ say
 push 5
 add
 say
+if
+condjump 0
+push 999
+say

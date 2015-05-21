@@ -18,21 +18,36 @@ impl<'a> VM<'a> {
   }
 
   pub fn run(&mut self) {
-    // TODO pass in default stack arguments?
-    for instr in self.instructions.iter() {
+    // just some aliases for brevity
+    let ref mut stack = self.stack;
+    let len = self.instructions.len();
+
+    // VM variables (might be moved back to the struct itself)
+    let mut ip = 0; // instruction pointer
+    let mut zx`
+
+    while ip < len {
+      let instr = self.instructions[ip];
+      ip += 1;
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
-        ["push", n] => self.stack.push(n.parse::<i64>().unwrap()),
-        ["add"] => {
-          if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
-            self.stack.push(arg1 + arg2);
-          } else {
-            println!("VM error: not enough arguments to `add`");
-          }
+        ["push", n] => stack.push(n.parse::<i64>().unwrap()),
+        ["add"] => if let (Some(arg1), Some(arg2)) = (stack.pop(), stack.pop()) {
+          stack.push(arg1 + arg2);
+        } else {
+          println!("VM error: not enough arguments to `add`");
         },
-        ["say"] => if let Some(arg) = self.stack.pop() {
+        ["say"] => if let Some(arg) = stack.pop() {
           println!("hey {}", arg);
         } else {
           println!("VM error: not enough arguments to `say`");
+        },
+        ["jump", n] => {
+          let new_ip = n.parse::<usize>().unwrap();
+          if new_ip < len {
+            ip = new_ip;
+          } else {
+            panic!("VM error: trying to jump past end of bytecode");
+          }
         },
         [""] => (), // just trap this for now
         [..] => println!("VM error: Unrecognized instruction!"), // todo err!
