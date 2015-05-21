@@ -51,6 +51,10 @@ impl<'a> VM<'a> {
             if how != "carry" || carry {
               ip = new_ip;
             }
+            // only reset carry if it was used
+            if (how == "carry") {
+              carry = false;
+            }
           } else {
             panic!("VM error: trying to jump past end of bytecode ({} > {})", new_ip, len);
           }
