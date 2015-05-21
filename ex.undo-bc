@@ -6,7 +6,8 @@ say
 push 5
 add
 say
-if
-condjump 0
+jump carry 11
+invert_carry
+jump always 0
 push 999
 say

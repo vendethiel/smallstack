@@ -24,7 +24,7 @@ impl<'a> VM<'a> {
 
     // VM variables (might be moved back to the struct itself)
     let mut ip = 0; // instruction pointer
-    let mut zx`
+    let mut carry = false;
 
     while ip < len {
       let instr = self.instructions[ip];
@@ -36,19 +36,28 @@ impl<'a> VM<'a> {
         } else {
           println!("VM error: not enough arguments to `add`");
         },
+
         ["say"] => if let Some(arg) = stack.pop() {
           println!("hey {}", arg);
         } else {
           println!("VM error: not enough arguments to `say`");
         },
-        ["jump", n] => {
+
+        ["jump", how, n] => {
           let new_ip = n.parse::<usize>().unwrap();
+
           if new_ip < len {
-            ip = new_ip;
+            // only check carry if we're not conditionally jumping
+            if how != "carry" || carry {
+              ip = new_ip;
+            }
           } else {
-            panic!("VM error: trying to jump past end of bytecode");
+            panic!("VM error: trying to jump past end of bytecode ({} > {})", new_ip, len);
           }
         },
+
+        ["invert_carry"] => carry = !carry,
+
         [""] => (), // just trap this for now
         [..] => println!("VM error: Unrecognized instruction!"), // todo err!
       }
