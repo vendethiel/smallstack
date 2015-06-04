@@ -77,7 +77,8 @@ impl<'a> VM<'a> {
           }
         },
 
-        ["invert_carry"] => carry = !carry,
+        ["carry", "set", val] => carry = val == "true",
+        ["carry", "invert"] => carry = !carry,
 
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]

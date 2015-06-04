@@ -7,7 +7,7 @@ push 5
 add
 say
 jump carry 11
-invert_carry
+carry invert
 jump always 0
 push 999
 say
