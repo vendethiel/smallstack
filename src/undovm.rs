@@ -3,23 +3,37 @@
 use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::collections::HashMap;
+
+type Expr = i64;
 
 struct VM<'a> {
-  stack: Vec<i64>,
-  instructions: Vec<&'a str>
+  stack: Vec<Expr>,
+  instructions: Vec<&'a str>,
+  locals: HashMap<&'a str, Expr>,
 }
 
 impl<'a> VM<'a> {
   pub fn new(instructions: Vec<&'a str>) -> VM {
     VM {
       stack: Vec::new(),
-      instructions: instructions
+      instructions: instructions,
+      locals: HashMap::new(),
     }
   }
+
+  /*urgh rust. can't borrow self as mut more than once, heh...
+  fn unsafe_pop(&mut self) -> Expr {
+    match self.stack.pop() {
+      Some(expr) => expr,
+      None => panic!("VM error: can't pop stack!")
+    }
+  }*/
 
   pub fn run(&mut self) {
     // just some aliases for brevity
     let ref mut stack = self.stack;
+    let ref mut locals = self.locals;
     let len = self.instructions.len();
 
     // VM variables (might be moved back to the struct itself)
@@ -43,6 +57,9 @@ impl<'a> VM<'a> {
           println!("VM error: not enough arguments to `say`");
         },
 
+        //["cmp", "<"] =>
+
+        // how = "carry" | "always"
         ["jump", how, n] => {
           let new_ip = n.parse::<usize>().unwrap();
 
@@ -52,7 +69,7 @@ impl<'a> VM<'a> {
               ip = new_ip;
             }
             // only reset carry if it was used
-            if (how == "carry") {
+            if how == "carry" {
               carry = false;
             }
           } else {
@@ -62,8 +79,35 @@ impl<'a> VM<'a> {
 
         ["invert_carry"] => carry = !carry,
 
-        [""] => (), // just trap this for now
-        [..] => println!("VM error: Unrecognized instruction!"), // todo err!
+        // NOTE: it's stack[*-1] OP stack[*-2]
+        // which means if have stack=[1, 2]
+        // you'll have 2 OP 1
+        ["cmp", op] => if let (Some(arg1), Some(arg2)) = (stack.pop(), stack.pop()) {
+          carry = match op {
+            "<" => arg1 < arg2,
+            ">" => arg1 > arg2,
+            "<=" => arg1 <= arg2,
+            ">=" => arg1 >= arg2,
+            "=" => arg1 == arg2,
+            _ => panic!("VM error: unrecognized `cmp` operator: {}", op),
+          };
+        } else {
+          panic!("VM error: not enough arguments to `cmp`"); 
+        },
+
+        ["local", "load", name] => match locals.get(name) {
+          Some(expr) => stack.push(expr.clone()),
+          None       => panic!("VM error: unknown local variable {}", name),
+        },
+
+        ["local", "store", name] => if let Some(arg) = stack.pop() {
+          let _ = locals.insert(name, arg);
+        } else {
+          panic!("VM error: not enough arguments for `local store`"); 
+        },
+
+        [instr, ..] => panic!("VM error: no such instruction {}", instr),
+        [..] => panic!("VM error: Unrecognized instruction!"), // todo err!
       }
     }
   }
@@ -77,7 +121,9 @@ fn main() {
       Ok(mut file) => {
         let mut content = String::new();
         if let Ok(_) = file.read_to_string(&mut content) {
-          let mut vm = VM::new(content.split('\n').collect());
+          // remove trailing newlines, split by line
+          let instructions = content.trim_matches('\n').split('\n').collect();
+          let mut vm = VM::new(instructions);
           vm.run();
         }
       },
