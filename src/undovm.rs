@@ -22,18 +22,8 @@ impl<'a> VM<'a> {
     }
   }
 
-  /*urgh rust. can't borrow self as mut more than once, heh...
-  fn unsafe_pop(&mut self) -> Expr {
-    match self.stack.pop() {
-      Some(expr) => expr,
-      None => panic!("VM error: can't pop stack!")
-    }
-  }*/
-
   pub fn run(&mut self) {
     // just some aliases for brevity
-    let ref mut stack = self.stack;
-    let ref mut locals = self.locals;
     let len = self.instructions.len();
 
     // VM variables (might be moved back to the struct itself)
@@ -44,14 +34,14 @@ impl<'a> VM<'a> {
       let instr = self.instructions[ip];
       ip += 1;
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
-        ["push", n] => stack.push(n.parse::<i64>().unwrap()),
-        ["add"] => if let (Some(arg1), Some(arg2)) = (stack.pop(), stack.pop()) {
-          stack.push(arg1 + arg2);
+        ["push", n] => self.stack.push(n.parse::<i64>().unwrap()),
+        ["add"] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
+          self.stack.push(arg1 + arg2);
         } else {
           println!("VM error: not enough arguments to `add`");
         },
 
-        ["say"] => if let Some(arg) = stack.pop() {
+        ["say"] => if let Some(arg) = self.stack.pop() {
           println!("hey {}", arg);
         } else {
           println!("VM error: not enough arguments to `say`");
@@ -83,7 +73,7 @@ impl<'a> VM<'a> {
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]
         // you'll have 2 OP 1
-        ["cmp", op] => if let (Some(arg1), Some(arg2)) = (stack.pop(), stack.pop()) {
+        ["cmp", op] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
           carry = match op {
             "<" => arg1 < arg2,
             ">" => arg1 > arg2,
@@ -96,13 +86,13 @@ impl<'a> VM<'a> {
           panic!("VM error: not enough arguments to `cmp`"); 
         },
 
-        ["local", "load", name] => match locals.get(name) {
-          Some(expr) => stack.push(expr.clone()),
+        ["local", "load", name] => match self.locals.get(name) {
+          Some(expr) => self.stack.push(expr.clone()),
           None       => panic!("VM error: unknown local variable {}", name),
         },
 
-        ["local", "store", name] => if let Some(arg) = stack.pop() {
-          let _ = locals.insert(name, arg);
+        ["local", "store", name] => if let Some(arg) = self.stack.pop() {
+          let _ = self.locals.insert(name, arg);
         } else {
           panic!("VM error: not enough arguments for `local store`"); 
         },
