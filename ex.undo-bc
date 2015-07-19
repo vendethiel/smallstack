@@ -1,10 +1,10 @@
 push 5
 push 10
 push 10
-add
+op +
 say
 push 5
-add
+op *
 say
 jump carry 11
 carry invert

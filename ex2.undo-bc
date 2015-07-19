@@ -1,0 +1,12 @@
+push 50
+local store a
+local load a
+say
+local load a
+push 50
+op *
+local store a
+local load a
+push 5000000
+cmp >=
+jump carry 2

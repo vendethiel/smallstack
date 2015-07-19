@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
 
+// TODO use an ADT here (#1)
 type Expr = i64;
 
 struct VM<'a> {
@@ -35,11 +36,6 @@ impl<'a> VM<'a> {
       ip += 1;
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
         ["push", n] => self.stack.push(n.parse::<i64>().unwrap()),
-        ["add"] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
-          self.stack.push(arg1 + arg2);
-        } else {
-          println!("VM error: not enough arguments to `add`");
-        },
 
         ["say"] => if let Some(arg) = self.stack.pop() {
           println!("hey {}", arg);
@@ -73,6 +69,19 @@ impl<'a> VM<'a> {
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]
         // you'll have 2 OP 1
+        ["op", op] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
+          let value = match op {
+            "+" => arg1 + arg2,
+            "-" => arg1 + arg2,
+            //"/" => TODO. this should have very specific rules...
+            "*" => arg1 * arg2,
+            _ => panic!("VM error: unrecognized `op` operator: {}", op),
+          };
+          self.stack.push(value);
+        } else {
+          println!("VM error: not enough arguments to `add`");
+        },
+        // same note about "2 OP 1"
         ["cmp", op] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
           carry = match op {
             "<" => arg1 < arg2,
@@ -83,9 +92,10 @@ impl<'a> VM<'a> {
             _ => panic!("VM error: unrecognized `cmp` operator: {}", op),
           };
         } else {
-          panic!("VM error: not enough arguments to `cmp`"); 
+          panic!("VM error: not enough arguments to `cmp`");
         },
 
+        // TODO name should probably be an identifier under SSAF, see backend#1
         ["local", "load", name] => match self.locals.get(name) {
           Some(expr) => self.stack.push(expr.clone()),
           None       => panic!("VM error: unknown local variable {}", name),
@@ -94,7 +104,7 @@ impl<'a> VM<'a> {
         ["local", "store", name] => if let Some(arg) = self.stack.pop() {
           let _ = self.locals.insert(name, arg);
         } else {
-          panic!("VM error: not enough arguments for `local store`"); 
+          panic!("VM error: not enough arguments for `local store`");
         },
 
         [instr, ..] => panic!("VM error: no such instruction {}", instr),
