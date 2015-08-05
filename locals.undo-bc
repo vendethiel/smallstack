@@ -1,12 +1,13 @@
-push 50
+push int 50
 local store a
 local load a
-say
+strconv int
+call say
 local load a
-push 50
-op *
+push int 50
+math *
 local store a
 local load a
-push 5000000
+push int 5000000
 cmp >=
 jump carry 2

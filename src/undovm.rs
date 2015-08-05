@@ -1,12 +1,17 @@
 #![feature(convert)]
 #![feature(slice_patterns)]
+#![feature(collections)]
 use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
 
 // TODO use an ADT here (#1)
-type Expr = i64;
+#[derive(Clone)]
+enum Expr {
+  Int(i64),
+  Str(String)
+}
 
 struct VM<'a> {
   stack: Vec<Expr>,
@@ -35,12 +40,14 @@ impl<'a> VM<'a> {
       let instr = self.instructions[ip];
       ip += 1;
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
-        ["push", n] => self.stack.push(n.parse::<i64>().unwrap()),
+        ["push", "int", n] => self.stack.push(Expr::Int(n.parse::<i64>().unwrap())),
+        ["push", "str", n] => self.stack.push(Expr::Str(String::from_str(n))),
 
-        ["say"] => if let Some(arg) = self.stack.pop() {
-          println!("hey {}", arg);
+        // convert to string
+        ["strconv", "int"] => if let Some(&Expr::Int(arg)) = self.stack.last() {
+          self.stack.push(Expr::Str(arg.to_string()));
         } else {
-          println!("VM error: not enough arguments to `say`");
+          panic!("VM error: cannot convert int to string");
         },
 
         //["cmp", "<"] =>
@@ -66,10 +73,20 @@ impl<'a> VM<'a> {
         ["carry", "set", val] => carry = val == "true",
         ["carry", "invert"] => carry = !carry,
 
+        ["call", "say"] => if let Some(Expr::Str(arg)) = self.stack.pop() {
+          println!("hey {}", arg);
+        } else {
+          panic!("VM error: incorrect arguments to `say`");
+        },
+
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]
         // you'll have 2 OP 1
-        ["op", op] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
+        /// XXX this should JUST be a call! a call to infix:<...>, that is
+        ["math", op] => if let
+            (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
+            =
+            (self.stack.pop(), self.stack.pop()) {
           let value = match op {
             "+" => arg1 + arg2,
             "-" => arg1 + arg2,
@@ -77,12 +94,17 @@ impl<'a> VM<'a> {
             "*" => arg1 * arg2,
             _ => panic!("VM error: unrecognized `op` operator: {}", op),
           };
-          self.stack.push(value);
+          self.stack.push(Expr::Int(value));
         } else {
-          println!("VM error: not enough arguments to `add`");
+          panic!("VM error: not enough arguments to `add`");
         },
+
         // same note about "2 OP 1"
-        ["cmp", op] => if let (Some(arg1), Some(arg2)) = (self.stack.pop(), self.stack.pop()) {
+        // XXX same note about how this should be a `call`
+        ["cmp", op] => if let
+            (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
+            =
+            (self.stack.pop(), self.stack.pop()) {
           carry = match op {
             "<" => arg1 < arg2,
             ">" => arg1 > arg2,
@@ -129,11 +151,11 @@ fn main() {
         }
       },
       Err(err) => {
-        println!("Can't read file {} (error: {})", path, err);
+        panic!("Can't read file {} (error: {})", path, err);
       }
     }
 	} else {
-    println!("Please give a file argument");
+    panic!("Please give a file argument");
   }
 
   //     let path = Path::new("chry.fa");
