@@ -50,14 +50,12 @@ impl<'a> VM<'a> {
           panic!("VM error: cannot convert int to string");
         },
 
-        //["cmp", "<"] =>
-
         // how = "carry" | "always"
         ["jump", how, n] => {
           let new_ip = n.parse::<usize>().unwrap();
 
           if new_ip < len {
-            // only check carry if we're not conditionally jumping
+            // only check carry if we are conditionally jumping
             if how != "carry" || carry {
               ip = new_ip;
             }
@@ -117,7 +115,10 @@ impl<'a> VM<'a> {
           panic!("VM error: not enough arguments to `cmp`");
         },
 
-        // TODO name should probably be an identifier under SSAF, see backend#1
+        // TODO this *shouldn't* be an identifier
+        //      the backend should transform SSAF to tons of load/store
+        //      (probably)
+        //      (see backend#1)
         ["local", "load", name] => match self.locals.get(name) {
           Some(expr) => self.stack.push(expr.clone()),
           None       => panic!("VM error: unknown local variable {}", name),
@@ -130,7 +131,7 @@ impl<'a> VM<'a> {
         },
 
         [instr, ..] => panic!("VM error: no such instruction {}", instr),
-        [..] => panic!("VM error: Unrecognized instruction!"), // todo err!
+        [..] => panic!("VM error: Unrecognized instruction!"),
       }
     }
   }
