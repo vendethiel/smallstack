@@ -28,6 +28,13 @@ impl<'a> VM<'a> {
     }
   }
 
+  fn unsafe_pop(&mut self) -> Expr {
+    match self.stack.pop() {
+      Some(expr) => expr,
+      None => panic!("VM error: stack is empty"),
+    }
+  }
+
   pub fn run(&mut self) {
     // just some aliases for brevity
     let len = self.instructions.len();
@@ -42,6 +49,12 @@ impl<'a> VM<'a> {
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
         ["push", "int", n] => self.stack.push(Expr::Int(n.parse::<i64>().unwrap())),
         ["push", "str", n] => self.stack.push(Expr::Str(String::from_str(n))),
+
+        ["dup"] => {
+          let expr = self.unsafe_pop();
+          self.stack.push(expr.clone());
+          self.stack.push(expr);
+        },
 
         // convert to string
         ["strconv", "int"] => if let Some(&Expr::Int(arg)) = self.stack.last() {
