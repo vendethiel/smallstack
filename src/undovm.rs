@@ -92,7 +92,7 @@ impl<'a> VM<'a> {
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]
         // you'll have 2 OP 1
-        /// XXX this should JUST be a call! a call to infix:<...>, that is
+        /// XXX this should JUST be a call!
         ["math", op] => if let
             (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
             =
