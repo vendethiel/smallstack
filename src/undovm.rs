@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
 
-// TODO use an ADT here (#1)
 #[derive(Clone)]
 enum Expr {
   Int(i64),
