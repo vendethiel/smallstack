@@ -41,10 +41,7 @@ impl<'a> VM<'a> {
   }
 
   fn unsafe_pop(&mut self) -> Expr {
-    match self.stack.pop() {
-      Some(expr) => expr,
-      None => panic!("VM error: stack is empty"),
-    }
+    self.stack.pop().expect("VM error: stack is empty")
   }
 
   pub fn run(&mut self) {
