@@ -1,13 +1,15 @@
 push int 50
 local store a
+$label start
 local load a
-strconv int
+convert int str
 call say
 local load a
-push int 50
+push int 10
 math *
 local store a
 local load a
 push int 5000000
 cmp >=
-jump carry 2
+# jump back to the beginning if we didn't reach that point yet
+jump carry $start
