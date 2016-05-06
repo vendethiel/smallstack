@@ -1,6 +1,4 @@
-#![feature(convert)]
 #![feature(slice_patterns)]
-#![feature(collections)]
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -62,7 +60,7 @@ impl<'a> VM<'a> {
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
         ["$label", _] => (),
         ["push", "int", n] => self.stack.push(Expr::Int(n.parse::<i64>().unwrap())),
-        ["push", "str", n] => self.stack.push(Expr::Str(String::from_str(n))),
+        ["push", "str", n] => self.stack.push(Expr::Str(String::from(n))),
 
         ["dup"] => {
           let expr = self.unsafe_pop();
