@@ -59,7 +59,7 @@ impl<'a> VM<'a> {
     while ip < len {
       let instr = self.instructions[ip];
       ip += 1;
-      if instr.starts_with("#") {
+      if instr.starts_with("#") || instr.trim() == "" {
         continue;
       }
       match instr.split(" ").collect::<Vec<_>>().as_slice() {

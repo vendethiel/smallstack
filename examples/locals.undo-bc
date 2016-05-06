@@ -1,15 +1,19 @@
 push int 50
 local store a
+# prepare the loop
 $label start
 local load a
+
 convert int str
 call say
+
 local load a
 push int 10
 math *
 local store a
+
 local load a
 push int 5000000
 cmp >=
-# jump back to the beginning if we didn't reach that point yet
+# jump back to the beginning if we didn't reach max yet
 jump carry $start
