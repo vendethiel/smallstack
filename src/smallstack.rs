@@ -20,8 +20,7 @@ struct VM<'a> {
 
 fn parse_labels<'a>(instructions: &Vec<&'a str>) -> HashMap<&'a str, usize> {
   let mut map = HashMap::new();
-  for (i, instr)
-     in instructions.iter().enumerate() {
+  for (i, instr) in instructions.iter().enumerate() {
     if instr.starts_with("$label") {
       match instr.split(' ').nth(1) {
         Some(label) => map.insert(label, i),
