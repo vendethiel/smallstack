@@ -1,4 +1,4 @@
 [root]
-name = "undo-vm"
+name = "smallstack"
 version = "0.0.1"
 

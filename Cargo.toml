@@ -1,6 +1,6 @@
 [package]
-name = "undo-vm"
+name = "smallstack"
 version = "0.0.1"
 
 [[bin]]
-name = "undovm"
+name = "smallstack"
