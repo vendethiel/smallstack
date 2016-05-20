@@ -98,11 +98,13 @@ impl<'a> VM<'a> {
         ["carry", "set", val] => carry = val == "true",
         ["carry", "invert"] => carry = !carry,
 
-        ["call", "say"] => if let Some(Expr::Str(arg)) = self.stack.pop() {
+        ["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = self.stack.pop() {
           println!("hey {}", arg);
         } else {
           panic!("VM error: incorrect arguments to `say`");
         },
+
+        ["call", name] => panic!("VM error: unknown function '{}'.", name),
 
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]
