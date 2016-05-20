@@ -10,8 +10,11 @@ enum Expr {
   Str(String)
 }
 
+// XXX this should probably be split up. The VM has the instructions, a "Thread" has locals, stack, and arguments.
 struct VM<'a> {
   stack: Vec<Expr>,
+  // the arguments to pass to the next function call
+  arguments: Vec<Expr>,
   instructions: Vec<&'a str>,
   locals: HashMap<&'a str, Expr>,
 }
@@ -33,6 +36,7 @@ impl<'a> VM<'a> {
   pub fn new(instructions: Vec<&'a str>) -> VM {
     VM {
       stack: Vec::new(),
+      arguments: Vec::new(),
       instructions: instructions,
       locals: HashMap::new(),
     }
@@ -61,6 +65,7 @@ impl<'a> VM<'a> {
         ["$label", _] => (),
         ["push", "int", n] => self.stack.push(Expr::Int(n.parse::<i64>().unwrap())),
         ["push", "str", n] => self.stack.push(Expr::Str(String::from(n))),
+        ["push", "arg"] => self.arguments.push(self.stack.pop().expect("Nothing on the stack to push to the arguments")),
 
         ["dup"] => {
           let expr = self.unsafe_pop();
