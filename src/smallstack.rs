@@ -12,11 +12,9 @@ enum Expr {
 
 // XXX this should probably be split up. The VM has the instructions, a "Thread" has locals, stack, and arguments.
 struct VM<'a> {
-  stack: Vec<Expr>,
-  // the arguments to pass to the next function call
-  arguments: Vec<Expr>,
   instructions: Vec<&'a str>,
   locals: HashMap<&'a str, Expr>,
+  labels: HashMap<&'a str, usize>,
 }
 
 fn parse_labels<'a>(instructions: &Vec<&'a str>) -> HashMap<&'a str, usize> {
@@ -35,25 +33,25 @@ fn parse_labels<'a>(instructions: &Vec<&'a str>) -> HashMap<&'a str, usize> {
 impl<'a> VM<'a> {
   pub fn new(instructions: Vec<&'a str>) -> VM {
     VM {
-      stack: Vec::new(),
-      arguments: Vec::new(),
+      labels: parse_labels(&instructions),
       instructions: instructions,
       locals: HashMap::new(),
     }
   }
 
-  fn unsafe_pop(&mut self) -> Expr {
-    self.stack.pop().expect("VM error: stack is empty")
+  pub fn run(&mut self) {
+    let ip = self.labels.get("main").unwrap_or(&0).clone();
+    self.run_call(ip, &mut Vec::new());
   }
 
-  pub fn run(&mut self) {
+  // TODO locals
+  pub fn run_call(&mut self, start_ip: usize, stack: &mut Vec<Expr>) {
+    let mut ip = start_ip;
     let len = self.instructions.len();
 
-    // VM variables (might be moved back to the struct itself)
-    let mut ip = 0; // instruction pointer
     let mut carry = false; // comparison carry
 
-    let labels = parse_labels(&self.instructions);
+    let mut arguments = Vec::new();
 
     while ip < len {
       let instr = self.instructions[ip];
@@ -63,19 +61,19 @@ impl<'a> VM<'a> {
       }
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
         ["$label", _] => (),
-        ["push", "int", n] => self.stack.push(Expr::Int(n.parse::<i64>().unwrap())),
-        ["push", "str", n] => self.stack.push(Expr::Str(String::from(n))),
-        ["push", "arg"] => self.arguments.push(self.stack.pop().expect("Nothing on the stack to push to the arguments")),
+        ["push", "int", n] => stack.push(Expr::Int(n.parse::<i64>().unwrap())),
+        ["push", "str", n] => stack.push(Expr::Str(String::from(n))),
+        ["push", "arg"] => arguments.push(stack.pop().expect("Nothing on the stack to push to the arguments")),
 
         ["dup"] => {
-          let expr = self.unsafe_pop();
-          self.stack.push(expr.clone());
-          self.stack.push(expr);
+          let expr = stack.pop().expect("Nothing on the stack to pop");
+          stack.push(expr.clone());
+          stack.push(expr);
         },
 
         // convert to string
-        ["convert", "int", "str"] => if let Some(&Expr::Int(arg)) = self.stack.last() {
-          self.stack.push(Expr::Str(arg.to_string()));
+        ["convert", "int", "str"] => if let Some(&Expr::Int(arg)) = stack.last() {
+          stack.push(Expr::Str(arg.to_string()));
         } else {
           panic!("VM error: cannot convert int to string");
         },
@@ -85,7 +83,7 @@ impl<'a> VM<'a> {
         // how = "always" | "carry"
         ["jump", how, n] => {
           let new_ip = if n.starts_with("$") {
-            labels.get(n.trim_matches('$')).expect("VM error: no such label").clone()
+            self.labels.get(n.trim_matches('$')).expect("VM error: no such label").clone()
           } else {
             n.parse::<usize>().unwrap()
           };
@@ -103,13 +101,22 @@ impl<'a> VM<'a> {
         ["carry", "set", val] => carry = val == "true",
         ["carry", "invert"] => carry = !carry,
 
-        ["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = self.stack.pop() {
+        ["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = stack.pop() {
           println!("hey {}", arg);
         } else {
           panic!("VM error: incorrect arguments to `say`");
         },
 
-        ["call", name] => panic!("VM error: unknown function '{}'.", name),
+        // TODO resolve name in scope, check type, apply
+        ["call", name] => {
+          let new_ip = self.labels.get(name).expect("VM error: no such label").clone();
+          self.run_call(new_ip, &mut arguments);
+          arguments = Vec::new();
+        },
+
+        ["ret"] => {
+          return;
+        },
 
         // NOTE: it's stack[*-1] OP stack[*-2]
         // which means if have stack=[1, 2]
@@ -118,7 +125,7 @@ impl<'a> VM<'a> {
         ["math", op] => if let
             (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
             =
-            (self.stack.pop(), self.stack.pop()) {
+            (stack.pop(), stack.pop()) {
           let value = match op {
             "+" => arg1 + arg2,
             "-" => arg1 + arg2,
@@ -126,7 +133,7 @@ impl<'a> VM<'a> {
             "*" => arg1 * arg2,
             _ => panic!("VM error: unrecognized `op` operator: {}", op),
           };
-          self.stack.push(Expr::Int(value));
+          stack.push(Expr::Int(value));
         } else {
           panic!("VM error: not enough arguments to `add`");
         },
@@ -136,7 +143,7 @@ impl<'a> VM<'a> {
         ["cmp", op] => if let
             (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
             =
-            (self.stack.pop(), self.stack.pop()) {
+            (stack.pop(), stack.pop()) {
           carry = match op {
             "<" => arg1 < arg2,
             ">" => arg1 > arg2,
@@ -154,11 +161,12 @@ impl<'a> VM<'a> {
         //      (probably)
         //      (see backend#1)
         ["local", "load", name] => match self.locals.get(name) {
-          Some(expr) => self.stack.push(expr.clone()),
+          Some(expr) => stack.push(expr.clone()),
           None       => panic!("VM error: unknown local variable {}", name),
         },
 
-        ["local", "store", name] => if let Some(arg) = self.stack.pop() {
+        ["local", "store", name] => if let Some(arg) = stack.pop() {
+          // XXX check
           let _ = self.locals.insert(name, arg);
         } else {
           panic!("VM error: not enough arguments for `local store`");
