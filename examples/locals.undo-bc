@@ -5,7 +5,7 @@ $label start
 local load a
 
 convert int str
-call say
+call primitive say
 
 local load a
 push int 10
@@ -17,3 +17,6 @@ push int 5000000
 cmp >=
 # jump back to the beginning if we didn't reach max yet
 jump carry $start
+
+push arg
+#call say
