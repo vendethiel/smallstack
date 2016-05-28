@@ -1,0 +1,20 @@
+$label domath
+math *
+push arg
+call printint
+ret
+
+$label printint
+convert int str
+call primitive say
+ret
+
+$label main
+push int 50
+push int 30
+push arg
+push arg
+call domath
+push int 100
+push arg
+call printint
