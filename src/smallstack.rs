@@ -146,7 +146,7 @@ impl<'a> VM<'a> {
           };
           stack.push(Expr::Int(value));
         } else {
-          panic!("VM error: not enough arguments to `add`");
+          panic!("VM error: not enough arguments to `math`");
         },
 
         // same note about "2 OP 1"
