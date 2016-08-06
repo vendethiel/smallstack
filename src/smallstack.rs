@@ -45,7 +45,7 @@ impl<'a> VM<'a> {
   }
 
   // TODO locals
-  pub fn run_call(&mut self, start_ip: usize, stack: &mut Vec<Expr>) {
+  pub fn run_call(&mut self, start_ip: usize, stack: &mut Vec<Expr>) -> Option<Expr> {
     let mut ip = start_ip;
     let len = self.instructions.len();
 
@@ -110,12 +110,23 @@ impl<'a> VM<'a> {
         // TODO resolve name in scope, check type, apply
         ["call", name] => {
           let new_ip = self.labels.get(name).expect("VM error: no such label").clone();
-          self.run_call(new_ip, &mut arguments);
+          let ret = self.run_call(new_ip, &mut arguments);
           arguments = Vec::new();
+          match ret {
+            Some(val) => stack.push(val),
+            None => (),
+          };
         },
 
         ["ret"] => {
-          return;
+          return None;
+        },
+
+        ["ret", "val"] => {
+          if stack.len() != 1 {
+            panic!("VM error: trying to return a value but the stack size is not 1 ({})", stack.len());
+          }
+          return stack.pop();
         },
 
         // NOTE: it's stack[*-1] OP stack[*-2]
@@ -176,6 +187,8 @@ impl<'a> VM<'a> {
         [..] => panic!("VM error: Unrecognized instruction!"),
       }
     }
+
+    None
   }
 }
 
