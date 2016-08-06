@@ -72,7 +72,7 @@ impl<'a> VM<'a> {
         },
 
         // convert to string
-        ["convert", "int", "str"] => if let Some(&Expr::Int(arg)) = stack.last() {
+        ["convert", "int", "str"] => if let Some(Expr::Int(arg)) = stack.pop() {
           stack.push(Expr::Str(arg.to_string()));
         } else {
           panic!("VM error: cannot convert int to string");
