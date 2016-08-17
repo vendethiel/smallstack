@@ -92,7 +92,7 @@ impl<'a> VM<'a> {
         &["carry", "invert"] => carry = !carry,
 
         &["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = stack.pop() {
-          println!("hey {}", arg);
+          println!("{}", arg);
         } else {
           panic!("VM error: incorrect arguments to `say`");
         },
