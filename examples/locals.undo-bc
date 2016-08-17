@@ -4,7 +4,9 @@ local store a
 $label start
 local load a
 
-convert int str
+push str str
+push str int
+call primitive convert
 call primitive say
 
 local load a

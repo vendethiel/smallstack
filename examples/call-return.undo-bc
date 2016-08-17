@@ -4,7 +4,9 @@ ret val
 
 $label to_string
 # obviously dispatches based on type here *kof*...
-convert int str
+push str str
+push str int
+call primitive convert
 ret val
 
 $label main
