@@ -71,15 +71,6 @@ impl<'a> VM<'a> {
           stack.push(expr);
         },
 
-        // convert to string
-        &["convert", "int", "str"] => if let Some(Expr::Int(arg)) = stack.pop() {
-          stack.push(Expr::Str(arg.to_string()));
-        } else {
-          panic!("VM error: cannot convert int to string");
-        },
-
-        &["convert", from, to] => panic!("VM error: cannot convert from {} to {}", from, to),
-
         // how = "always" | "carry"
         &["jump", how, n] => {
           let new_ip = if n.starts_with("$") {
@@ -111,6 +102,24 @@ impl<'a> VM<'a> {
             Some(Expr::Str(_)) => stack.push(Expr::Str(String::from("str"))),
             Some(Expr::Int(_)) => stack.push(Expr::Str(String::from("int"))),
             None => panic!("VM error: no argument supplied to `typeof`"),
+        },
+
+        &["call", "primitive", "convert"] => if let
+            (Some(Expr::Str(from)), Some(Expr::Str(to)))
+            =
+            (stack.pop(), stack.pop()) {
+
+            match (from.as_ref(), to.as_ref()) {
+                ("int", "str") => if let Some(Expr::Int(arg)) = stack.pop() {
+                  stack.push(Expr::Str(arg.to_string()));
+                } else {
+                  panic!("VM error: cannot convert int to string");
+                },
+                _ => panic!("VM error: cannot convert from {} to {}", from, to),
+            }
+        }
+        else {
+            panic!("VM error: bad arguments to primitive call `convert`");
         },
 
         // TODO resolve name in scope, check type, apply
