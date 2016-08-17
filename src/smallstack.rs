@@ -60,28 +60,28 @@ impl<'a> VM<'a> {
         continue;
       }
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
-        ["$label", _] => (),
-        ["push", "int", n] => stack.push(Expr::Int(n.parse::<i64>().unwrap())),
-        ["push", "str", n] => stack.push(Expr::Str(String::from(n))),
-        ["push", "arg"] => arguments.push(stack.pop().expect("Nothing on the stack to push to the arguments")),
+        &["$label", _] => (),
+        &["push", "int", n] => stack.push(Expr::Int(n.parse::<i64>().unwrap())),
+        &["push", "str", n] => stack.push(Expr::Str(String::from(n))),
+        &["push", "arg"] => arguments.push(stack.pop().expect("Nothing on the stack to push to the arguments")),
 
-        ["dup"] => {
+        &["dup"] => {
           let expr = stack.pop().expect("Nothing on the stack to pop");
           stack.push(expr.clone());
           stack.push(expr);
         },
 
         // convert to string
-        ["convert", "int", "str"] => if let Some(Expr::Int(arg)) = stack.pop() {
+        &["convert", "int", "str"] => if let Some(Expr::Int(arg)) = stack.pop() {
           stack.push(Expr::Str(arg.to_string()));
         } else {
           panic!("VM error: cannot convert int to string");
         },
 
-        ["convert", from, to] => panic!("VM error: cannot convert from {} to {}", from, to),
+        &["convert", from, to] => panic!("VM error: cannot convert from {} to {}", from, to),
 
         // how = "always" | "carry"
-        ["jump", how, n] => {
+        &["jump", how, n] => {
           let new_ip = if n.starts_with("$") {
             self.labels.get(n.trim_matches('$')).expect("VM error: no such label").clone()
           } else {
@@ -98,17 +98,23 @@ impl<'a> VM<'a> {
           }
         },
 
-        ["carry", "set", val] => carry = val == "true",
-        ["carry", "invert"] => carry = !carry,
+        &["carry", "set", val] => carry = val == "true",
+        &["carry", "invert"] => carry = !carry,
 
-        ["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = stack.pop() {
+        &["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = stack.pop() {
           println!("hey {}", arg);
         } else {
           panic!("VM error: incorrect arguments to `say`");
         },
 
+        &["call", "primitive", "typeof"] => match stack.pop() {
+            Some(Expr::Str(_)) => stack.push(Expr::Str(String::from("str"))),
+            Some(Expr::Int(_)) => stack.push(Expr::Str(String::from("int"))),
+            None => panic!("VM error: no argument supplied to `typeof`"),
+        },
+
         // TODO resolve name in scope, check type, apply
-        ["call", name] => {
+        &["call", name] => {
           let new_ip = self.labels.get(name).expect("VM error: no such label").clone();
           let ret = self.run_call(new_ip, &mut arguments);
           arguments = Vec::new();
@@ -118,11 +124,11 @@ impl<'a> VM<'a> {
           };
         },
 
-        ["ret"] => {
+        &["ret"] => {
           return None;
         },
 
-        ["ret", "val"] => {
+        &["ret", "val"] => {
           if stack.len() != 1 {
             panic!("VM error: trying to return a value but the stack size is not 1 ({})", stack.len());
           }
@@ -133,7 +139,7 @@ impl<'a> VM<'a> {
         // which means if have stack=[1, 2]
         // you'll have 2 OP 1
         /// XXX this should JUST be a call!
-        ["math", op] => if let
+        &["math", op] => if let
             (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
             =
             (stack.pop(), stack.pop()) {
@@ -151,40 +157,40 @@ impl<'a> VM<'a> {
 
         // same note about "2 OP 1"
         // XXX same note about how this should be a `call`
-        ["cmp", op] => if let
-            (Some(Expr::Int(arg1)), Some(Expr::Int(arg2)))
-            =
-            (stack.pop(), stack.pop()) {
-          carry = match op {
-            "<" => arg1 < arg2,
-            ">" => arg1 > arg2,
-            "<=" => arg1 <= arg2,
-            ">=" => arg1 >= arg2,
-            "=" => arg1 == arg2,
-            _ => panic!("VM error: unrecognized `cmp` operator: {}", op),
-          };
-        } else {
-          panic!("VM error: not enough arguments to `cmp`");
+        &["cmp", op] => carry = match (stack.pop(), stack.pop()) {
+            (Some(Expr::Int(arg1)), Some(Expr::Int(arg2))) => match op {
+                "<" => arg1 < arg2,
+                ">" => arg1 > arg2,
+                "<=" => arg1 <= arg2,
+                ">=" => arg1 >= arg2,
+                "=" => arg1 == arg2,
+                _ => panic!("VM error: unrecognized `cmp` operator for int: {}", op),
+            },
+            (Some(Expr::Str(arg1)), Some(Expr::Str(arg2))) => match op {
+                "=" => arg1 == arg2,
+                _ => panic!("VM error: unrecognized `cmp` operator for str: {}", op),
+            },
+            _ => panic!("VM error: not enough arguments to `cmp`"),
         },
 
         // TODO this *shouldn't* be an identifier
         //      the backend should transform SSAF to tons of load/store
         //      (probably)
         //      (see backend#1)
-        ["local", "load", name] => match self.locals.get(name) {
+        &["local", "load", name] => match self.locals.get(name) {
           Some(expr) => stack.push(expr.clone()),
           None       => panic!("VM error: unknown local variable {}", name),
         },
 
-        ["local", "store", name] => if let Some(arg) = stack.pop() {
+        &["local", "store", name] => if let Some(arg) = stack.pop() {
           // XXX check
           let _ = self.locals.insert(name, arg);
         } else {
           panic!("VM error: not enough arguments for `local store`");
         },
 
-        [instr, ..] => panic!("VM error: no such instruction {}", instr),
-        [..] => panic!("VM error: Unrecognized instruction!"),
+        &[instr, ..] => panic!("VM error: no such instruction {}", instr),
+        &[..] => panic!("VM error: Unrecognized instruction!"),
       }
     }
 
