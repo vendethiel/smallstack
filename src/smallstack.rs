@@ -207,26 +207,28 @@ impl<'a> VM<'a> {
 }
 
 fn main() {
+    let mut content = String::new();
+    let result;
+
 	if let Some(path) = env::args().nth(1) {
 		println!("Loading file {}", path);
 
-    match File::open(&path) {
-      Ok(mut file) => {
-        let mut content = String::new();
-        if let Ok(_) = file.read_to_string(&mut content) {
-          // remove trailing newlines, split by line
-          let instructions = content.trim_matches('\n').split('\n').collect();
-          let mut vm = VM::new(instructions);
-          vm.run();
+        match File::open(&path) {
+          Ok(mut file) => result = file.read_to_string(&mut content),
+          Err(err) => {
+            panic!("Can't read file {} (error: {})", path, err);
+          }
         }
-      },
-      Err(err) => {
-        panic!("Can't read file {} (error: {})", path, err);
-      }
-    }
-	} else {
-    panic!("Please give a file argument");
-  }
+    } else {
+        result = std::io::stdin().read_to_string(&mut content);
+   }
+
+   if let Ok(_) = result {
+     // remove trailing newlines, split by line
+     let instructions = content.trim_matches('\n').split('\n').collect();
+     let mut vm = VM::new(instructions);
+     vm.run();
+   }
 
   //     let path = Path::new("chry.fa");
   // let mut file = BufferedReader::new(File::open(&path));
