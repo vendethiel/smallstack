@@ -61,7 +61,7 @@ impl<'a> VM<'a> {
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
         &["$label", _] => (),
         &["push", "int", n] => stack.push(Expr::Int(n.parse::<i64>().unwrap())),
-        &["push", "str", n] => stack.push(Expr::Str(String::from(n))),
+        &["push", "str", ref n..] => stack.push(Expr::Str(String::from(n.join(" ")))),
         &["push", "arg"] => arguments.push(stack.pop().expect("Nothing on the stack to push to the arguments")),
 
         &["dup"] => {
