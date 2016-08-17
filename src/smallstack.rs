@@ -97,6 +97,15 @@ impl<'a> VM<'a> {
           panic!("VM error: incorrect arguments to `say`");
         },
 
+        &["call", "primitive", "concat"] => if let
+            (Some(Expr::Str(arg1)), Some(Expr::Str(arg2)))
+            =
+            (stack.pop(), stack.pop()) {
+          stack.push(Expr::Str(arg1 + &arg2));
+        } else {
+          panic!("VM error: incorrect arguments to `concat`");
+        },
+
         &["call", "primitive", "typeof"] => match stack.pop() {
             Some(Expr::Str(_)) => stack.push(Expr::Str(String::from("str"))),
             Some(Expr::Int(_)) => stack.push(Expr::Str(String::from("int"))),
