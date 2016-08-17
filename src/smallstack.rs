@@ -103,22 +103,11 @@ impl<'a> VM<'a> {
             None => panic!("VM error: no argument supplied to `typeof`"),
         },
 
-        &["call", "primitive", "convert"] => if let
-            (Some(Expr::Str(from)), Some(Expr::Str(to)))
-            =
-            (stack.pop(), stack.pop()) {
-
-            match (from.as_ref(), to.as_ref()) {
-                ("int", "str") => if let Some(Expr::Int(arg)) = stack.pop() {
-                  stack.push(Expr::Str(arg.to_string()));
-                } else {
-                  panic!("VM error: cannot convert int to string");
-                },
-                _ => panic!("VM error: cannot convert from {} to {}", from, to),
-            }
+        &["call", "primitive", "int2str"] => if let Some(Expr::Int(arg)) = stack.pop() {
+            stack.push(Expr::Str(arg.to_string()));
         }
         else {
-            panic!("VM error: bad arguments to primitive call `convert`");
+            panic!("VM error: bad arguments to primitive call `int2str`");
         },
 
         // TODO resolve name in scope, check type, apply
