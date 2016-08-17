@@ -13,7 +13,6 @@ enum Expr {
 // XXX this should probably be split up. The VM has the instructions, a "Thread" has locals, stack, and arguments.
 struct VM<'a> {
   instructions: Vec<&'a str>,
-  locals: HashMap<&'a str, Expr>,
   labels: HashMap<&'a str, usize>,
 }
 
@@ -35,7 +34,6 @@ impl<'a> VM<'a> {
     VM {
       labels: parse_labels(&instructions),
       instructions: instructions,
-      locals: HashMap::new(),
     }
   }
 
@@ -48,6 +46,7 @@ impl<'a> VM<'a> {
   pub fn run_call(&mut self, start_ip: usize, stack: &mut Vec<Expr>) -> Option<Expr> {
     let mut ip = start_ip;
     let len = self.instructions.len();
+    let locals: &mut HashMap<&'a str, Expr> = &mut HashMap::new();
 
     let mut carry = false; // comparison carry
 
@@ -154,7 +153,7 @@ impl<'a> VM<'a> {
             (stack.pop(), stack.pop()) {
           let value = match op {
             "+" => arg1 + arg2,
-            "-" => arg1 + arg2,
+            "-" => arg1 - arg2,
             //"/" => TODO. this should have very specific rules...
             "*" => arg1 * arg2,
             _ => panic!("VM error: unrecognized `op` operator: {}", op),
@@ -186,14 +185,14 @@ impl<'a> VM<'a> {
         //      the backend should transform SSAF to tons of load/store
         //      (probably)
         //      (see backend#1)
-        &["local", "load", name] => match self.locals.get(name) {
+        &["local", "load", name] => match locals.get(name) {
           Some(expr) => stack.push(expr.clone()),
           None       => panic!("VM error: unknown local variable {}", name),
         },
 
         &["local", "store", name] => if let Some(arg) = stack.pop() {
           // XXX check
-          let _ = self.locals.insert(name, arg);
+          let _ = locals.insert(name, arg);
         } else {
           panic!("VM error: not enough arguments for `local store`");
         },
