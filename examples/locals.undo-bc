@@ -17,6 +17,3 @@ push int 5000000
 cmp >=
 # jump back to the beginning if we didn't reach max yet
 jump carry $start
-
-push arg
-#call say

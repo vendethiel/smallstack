@@ -3,7 +3,7 @@ push int 10
 push int 10
 math +
 call primitive int2str
-primitive_call say
+call primitive say
 push int 5
 math *
 call primitive int2str

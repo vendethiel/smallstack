@@ -10,9 +10,6 @@ ret val
 $label main
 push int 10
 push int 5
-push arg
-push arg
-call domath
-push arg
-call to_string
+call 2 domath
+call 1 to_string
 call primitive say

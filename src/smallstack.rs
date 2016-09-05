@@ -46,11 +46,10 @@ impl<'a> VM<'a> {
   pub fn run_call(&mut self, start_ip: usize, stack: &mut Vec<Expr>) -> Option<Expr> {
     let mut ip = start_ip;
     let len = self.instructions.len();
+    //let mut locals = HashMap::new();
     let locals: &mut HashMap<&'a str, Expr> = &mut HashMap::new();
 
     let mut carry = false; // comparison carry
-
-    let mut arguments = Vec::new();
 
     while ip < len {
       let instr = self.instructions[ip];
@@ -62,7 +61,6 @@ impl<'a> VM<'a> {
         &["$label", _] => (),
         &["push", "int", n] => stack.push(Expr::Int(n.parse::<i64>().unwrap())),
         &["push", "str", ref n..] => stack.push(Expr::Str(String::from(n.join(" ")))),
-        &["push", "arg"] => arguments.push(stack.pop().expect("Nothing on the stack to push to the arguments")),
 
         &["dup"] => {
           let expr = stack.pop().expect("Nothing on the stack to pop");
@@ -120,10 +118,13 @@ impl<'a> VM<'a> {
         },
 
         // TODO resolve name in scope, check type, apply
-        &["call", name] => {
+        &["call", arity_str, name] => {
+          // TODO assert arityStr <= stack.len()
+          let arity = arity_str.parse::<usize>().unwrap();
+          let stack_len = stack.len();
+          let mut arguments = stack.split_off(stack_len - arity);
           let new_ip = self.labels.get(name).expect("VM error: no such label").clone();
           let ret = self.run_call(new_ip, &mut arguments);
-          arguments = Vec::new();
           match ret {
             Some(val) => stack.push(val),
             None => (),
@@ -195,9 +196,9 @@ impl<'a> VM<'a> {
           panic!("VM error: not enough arguments for `local store`");
         },
 
-        &[instr, ..] => panic!("VM error: no such instruction {}", instr),
+        &[instr, ..] => panic!("VM error: Unrecognized instruction {}!", instr),
         &[..] => panic!("VM error: Unrecognized instruction!"),
-      }
+      };
     }
 
     None

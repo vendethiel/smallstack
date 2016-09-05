@@ -1,7 +1,6 @@
 $label domath
 math *
-push arg
-call printint
+call 1 printint
 ret
 
 $label printint
@@ -12,9 +11,6 @@ ret
 $label main
 push int 50
 push int 30
-push arg
-push arg
-call domath
+call 2 domath
 push int 100
-push arg
-call printint
+call 1 printint
