@@ -5,9 +5,7 @@ call printint
 ret
 
 $label printint
-push str str
-push str int
-call primitive convert
+call primitive int2str
 call primitive say
 ret
 

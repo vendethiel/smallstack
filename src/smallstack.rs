@@ -61,7 +61,7 @@ impl<'a> VM<'a> {
       match instr.split(" ").collect::<Vec<_>>().as_slice() {
         &["$label", _] => (),
         &["push", "int", n] => stack.push(Expr::Int(n.parse::<i64>().unwrap())),
-        &["push", "str", n] => stack.push(Expr::Str(String::from(n))),
+        &["push", "str", ref n..] => stack.push(Expr::Str(String::from(n.join(" ")))),
         &["push", "arg"] => arguments.push(stack.pop().expect("Nothing on the stack to push to the arguments")),
 
         &["dup"] => {
@@ -92,9 +92,18 @@ impl<'a> VM<'a> {
         &["carry", "invert"] => carry = !carry,
 
         &["call", "primitive", "say"] => if let Some(Expr::Str(arg)) = stack.pop() {
-          println!("hey {}", arg);
+          println!("{}", arg);
         } else {
           panic!("VM error: incorrect arguments to `say`");
+        },
+
+        &["call", "primitive", "concat"] => if let
+            (Some(Expr::Str(arg1)), Some(Expr::Str(arg2)))
+            =
+            (stack.pop(), stack.pop()) {
+          stack.push(Expr::Str(arg1 + &arg2));
+        } else {
+          panic!("VM error: incorrect arguments to `concat`");
         },
 
         &["call", "primitive", "typeof"] => match stack.pop() {
@@ -103,22 +112,11 @@ impl<'a> VM<'a> {
             None => panic!("VM error: no argument supplied to `typeof`"),
         },
 
-        &["call", "primitive", "convert"] => if let
-            (Some(Expr::Str(from)), Some(Expr::Str(to)))
-            =
-            (stack.pop(), stack.pop()) {
-
-            match (from.as_ref(), to.as_ref()) {
-                ("int", "str") => if let Some(Expr::Int(arg)) = stack.pop() {
-                  stack.push(Expr::Str(arg.to_string()));
-                } else {
-                  panic!("VM error: cannot convert int to string");
-                },
-                _ => panic!("VM error: cannot convert from {} to {}", from, to),
-            }
+        &["call", "primitive", "int2str"] => if let Some(Expr::Int(arg)) = stack.pop() {
+            stack.push(Expr::Str(arg.to_string()));
         }
         else {
-            panic!("VM error: bad arguments to primitive call `convert`");
+            panic!("VM error: bad arguments to primitive call `int2str`");
         },
 
         // TODO resolve name in scope, check type, apply
@@ -207,26 +205,28 @@ impl<'a> VM<'a> {
 }
 
 fn main() {
+    let mut content = String::new();
+    let result;
+
 	if let Some(path) = env::args().nth(1) {
 		println!("Loading file {}", path);
 
-    match File::open(&path) {
-      Ok(mut file) => {
-        let mut content = String::new();
-        if let Ok(_) = file.read_to_string(&mut content) {
-          // remove trailing newlines, split by line
-          let instructions = content.trim_matches('\n').split('\n').collect();
-          let mut vm = VM::new(instructions);
-          vm.run();
+        match File::open(&path) {
+          Ok(mut file) => result = file.read_to_string(&mut content),
+          Err(err) => {
+            panic!("Can't read file {} (error: {})", path, err);
+          }
         }
-      },
-      Err(err) => {
-        panic!("Can't read file {} (error: {})", path, err);
-      }
-    }
-	} else {
-    panic!("Please give a file argument");
-  }
+    } else {
+        result = std::io::stdin().read_to_string(&mut content);
+   }
+
+   if let Ok(_) = result {
+     // remove trailing newlines, split by line
+     let instructions = content.trim_matches('\n').split('\n').collect();
+     let mut vm = VM::new(instructions);
+     vm.run();
+   }
 
   //     let path = Path::new("chry.fa");
   // let mut file = BufferedReader::new(File::open(&path));
